@@ -12,7 +12,7 @@ while true; do
     echo "Receive ${ips[@]}"
     for ip in ${ips[@]}
     do
-        pgbench -h $ip -c 100 -T 3600
+        pgbench -h $ip -U postgres -c 100 -T 3600
     done &&
     nc -v 192.168.3.2 $PORT
     requested_ct=$((requested_ct+1))
