@@ -1,20 +1,28 @@
 #!/bin/bash
-set -x
+set -x &&
 
-PORT=2015
-START_CT_NUM=1
+PORT=2015 &&
+START_CT_NUM=1 &&
+SERVER_IP_PATTERN="Connection from \[(.*)\] port"
 
-requested_ct=$START_CT_NUM
+requested_ct=$START_CT_NUM &&
+
 while true; do
-    echo $requested_ct | nc -vv -l -p $PORT
-    echo "Send $requested_ct containers to server"
-    ips=($(echo "Test" | nc -v -l -p $PORT))
-    echo "Receive ${ips[@]}"
+    nc_output=$(echo $requested_ct | nc -v -l -p $PORT 2>&1) &&
+    if [[ $nc_output =~ $SERVER_IP_PATTERN ]]; then
+        server_ip=${BASH_REMATCH[1]}
+    else
+        echo "Error during parsing nc output - \'$nc_output\'" &&
+        exit 1
+    fi &&
+    echo "Send $requested_ct containers to server" &&
+    ips=($(nc -v -l -p $PORT)) &&
+    echo "Receive ${ips[@]}" &&
     for ip in ${ips[@]}
     do
-        pgbench -h $ip -U postgres -c 100 -T 3600
+        pgbench -h $ip -U postgres -c 100 -T 3600 &
     done &&
-    nc -v 192.168.3.2 $PORT
+    wait &&
+    nc -v $server_ip $PORT &&
     requested_ct=$((requested_ct+1))
 done
-
